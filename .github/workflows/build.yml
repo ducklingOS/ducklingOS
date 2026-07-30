@@ -58,29 +58,32 @@ jobs:
         # Kernel und Initrd extrahieren
         sudo cp $(ls -v build/squashfs/rootfs/boot/vmlinuz-* | tail -n 1) build/iso/casper/vmlinuz
         sudo cp $(ls -v build/squashfs/rootfs/boot/initrd.img-* | tail -n 1) build/iso/casper/initrd
-        
-        # Wir klonen das offizielle Repository und bauen das Tool direkt aus dem Quellcode!
+
+        # Fertige Limine-Binaries holen (KEIN make nötig, v7.x-binary enthält bereits fertige Dateien)
         git clone https://github.com/limine-bootloader/limine.git --branch=v7.x-binary --depth=1
-        
-        # Kompiliert das offizielle All-in-One-Werkzeug live auf dem Server (dauert < 5 Sekunden)
-        make -C limine
 
         # Dateien in die ISO-Struktur einpflegen
         mkdir -p build/iso/boot/limine
-        cp limine/limine-bios-cd.bin build/iso/boot/limine/
         cp limine/limine-bios.sys build/iso/boot/limine/
+        cp limine/limine-bios-cd.bin build/iso/boot/limine/
         cp limine/limine-uefi-cd.bin build/iso/boot/limine/
-        
+
         mkdir -p build/iso/EFI/BOOT
         cp limine/BOOTX64.EFI build/iso/EFI/BOOT/
         cp limine/BOOTIA32.EFI build/iso/EFI/BOOT/
 
-        # Limine-Konfigurationsdatei schreiben
-        echo -e "timeout: 5\n\n:ducklingOS 1 Starten\n    protocol: linux\n    kernel_path: boot:///casper/vmlinuz\n    initrd_path: boot:///casper/initrd\n    cmdline: boot=casper quiet splash ---" > build/iso/boot/limine/limine.conf
-        # Kopie für UEFI-Boot unter EFI/BOOT/
+        # Limine-Konfigurationsdatei (v7-Syntax: "/" statt ":", boot():/ statt boot:///)
+        cat > build/iso/boot/limine/limine.conf << 'EOF'
+timeout: 5
+
+/ducklingOS 1 Starten
+    protocol: linux
+    kernel_path: boot():/casper/vmlinuz
+    module_path: boot():/casper/initrd
+    cmdline: boot=casper quiet splash
+EOF
+        # Kopie für UEFI-Boot unter EFI/BOOT/ (Limine sucht hier zuerst)
         cp build/iso/boot/limine/limine.conf build/iso/EFI/BOOT/limine.conf
-        # Kopie im Root für maximale Kompatibilität
-        cp build/iso/boot/limine/limine.conf build/iso/limine.conf
 
         # Rechte für xorriso freigeben
         sudo chmod -R 755 build/

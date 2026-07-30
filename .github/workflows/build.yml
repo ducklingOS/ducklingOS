@@ -54,7 +54,7 @@ jobs:
       run: |
         # SquashFS Dateisystem komprimieren
         sudo mksquashfs build/squashfs/rootfs build/iso/casper/filesystem.squashfs -comp xz
-        
+
         # Kernel und Initrd extrahieren
         sudo cp $(ls -v build/squashfs/rootfs/boot/vmlinuz-* | tail -n 1) build/iso/casper/vmlinuz
         sudo cp $(ls -v build/squashfs/rootfs/boot/initrd.img-* | tail -n 1) build/iso/casper/initrd
@@ -72,16 +72,18 @@ jobs:
         cp limine/BOOTX64.EFI build/iso/EFI/BOOT/
         cp limine/BOOTIA32.EFI build/iso/EFI/BOOT/
 
-        # Limine-Konfigurationsdatei (v7-Syntax: "/" statt ":", boot():/ statt boot:///)
+        # Limine-Konfigurationsdatei (v7-Syntax). Einrückung hier ist fuer YAML noetig,
+        # die Leerzeichen landen mit in der Datei, stoeren Limine aber nicht.
         cat > build/iso/boot/limine/limine.conf << 'EOF'
-timeout: 5
+        timeout: 5
 
-/ducklingOS 1 Starten
-    protocol: linux
-    kernel_path: boot():/casper/vmlinuz
-    module_path: boot():/casper/initrd
-    cmdline: boot=casper quiet splash
-EOF
+        /ducklingOS 1 Starten
+            protocol: linux
+            kernel_path: boot():/casper/vmlinuz
+            module_path: boot():/casper/initrd
+            cmdline: boot=casper quiet splash
+        EOF
+
         # Kopie für UEFI-Boot unter EFI/BOOT/ (Limine sucht hier zuerst)
         cp build/iso/boot/limine/limine.conf build/iso/EFI/BOOT/limine.conf
 

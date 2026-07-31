@@ -1,7 +1,6 @@
 name: Build ducklingOS 1 x64 (GRUB Bootloader)
 on: 
-  push:
-    branches: [ main ]
+  workflow_dispatch:
 
 jobs:
   build-os:
@@ -33,7 +32,7 @@ jobs:
         sudo mkdir -p build/squashfs/rootfs/etc/skel/.config/
         if [ -d "skel/.config" ]; then sudo cp -r skel/.config/* build/squashfs/rootfs/etc/skel/.config/; fi
 
-    - name: Live-System konfigurieren & KDE Plasma installieren
+    - name: Live-System konfigurieren & GNOME installieren
       run: |
         sudo mount --bind /dev build/squashfs/rootfs/dev
         sudo mount --bind /proc build/squashfs/rootfs/proc
@@ -41,12 +40,25 @@ jobs:
 
         sudo cp /etc/resolv.conf build/squashfs/rootfs/etc/resolv.conf
         sudo chroot build/squashfs/rootfs apt-get update
-        
-        sudo DEBIAN_FRONTEND=noninteractive chroot build/squashfs/rootfs apt-get install -y --no-install-recommends linux-image-generic initramfs-tools live-boot casper
-        sudo DEBIAN_FRONTEND=noninteractive chroot build/squashfs/rootfs apt-get install -y kubuntu-desktop calamares sddm dbus-x11
 
-        sudo chroot build/squashfs/rootfs useradd -m -s /bin/bash -g sudo duckling
+        sudo DEBIAN_FRONTEND=noninteractive chroot build/squashfs/rootfs apt-get install -y --no-install-recommends linux-image-generic initramfs-tools live-boot casper
+
+        sudo DEBIAN_FRONTEND=noninteractive chroot build/squashfs/rootfs apt-get install -y --no-install-recommends \
+          ubuntu-desktop-minimal gdm3 dbus-x11 calamares calamares-settings-ubuntu
+
+        sudo DEBIAN_FRONTEND=noninteractive chroot build/squashfs/rootfs apt-get purge -y \
+          kubuntu-desktop sddm plasma-desktop plasma-workspace 2>/dev/null || true
+        sudo chroot build/squashfs/rootfs apt-get autoremove -y
+
+        sudo chroot build/squashfs/rootfs useradd -m -s /bin/bash -G sudo duckling
         sudo chroot build/squashfs/rootfs passwd -d duckling
+
+        sudo mkdir -p build/squashfs/rootfs/etc/gdm3
+        sudo bash -c 'cat > build/squashfs/rootfs/etc/gdm3/custom.conf << EOF
+        [daemon]
+        AutomaticLoginEnable=true
+        AutomaticLogin=duckling
+        EOF'
 
         sudo umount build/squashfs/rootfs/dev
         sudo umount build/squashfs/rootfs/proc

@@ -72,8 +72,7 @@ jobs:
         cp limine/BOOTX64.EFI build/iso/EFI/BOOT/
         cp limine/BOOTIA32.EFI build/iso/EFI/BOOT/
 
-        # Limine-Konfigurationsdatei (v7-Syntax). Einrückung hier ist fuer YAML noetig,
-        # die Leerzeichen landen mit in der Datei, stoeren Limine aber nicht.
+        # Limine-Konfigurationsdatei (v7-Syntax)
         cat > build/iso/boot/limine/limine.conf << 'EOF'
         timeout: 5
 
@@ -84,8 +83,10 @@ jobs:
             cmdline: boot=casper quiet splash
         EOF
 
-        # Kopie für UEFI-Boot unter EFI/BOOT/ (Limine sucht hier zuerst)
+        # Kopie für UEFI-Boot unter EFI/BOOT/
         cp build/iso/boot/limine/limine.conf build/iso/EFI/BOOT/limine.conf
+        # Kopie im ISO-Root für BIOS-Modus (das hat gefehlt!)
+        cp build/iso/boot/limine/limine.conf build/iso/limine.conf
 
         # Rechte für xorriso freigeben
         sudo chmod -R 755 build/

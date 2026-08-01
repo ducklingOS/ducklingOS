@@ -31,7 +31,7 @@ jobs:
         sudo mkdir -p build/squashfs/rootfs/usr/share/backgrounds/duckling/
         sudo cp duckling_wallpaper.jpg build/squashfs/rootfs/usr/share/backgrounds/duckling/default.jpg
         
-        # Hintergrund für KDE Global (damit es sofort greift)
+        # Globales KDE-Hintergrundbild via /etc/skel erzwingen
         sudo mkdir -p build/squashfs/rootfs/etc/skel/.config
         sudo tee build/squashfs/rootfs/etc/skel/.config/plasma-org.kde.plasma.desktop-appletsrc << 'EOF'
         [Containments][1][Wallpaper][org.kde.image][General]
@@ -51,15 +51,24 @@ jobs:
         sudo DEBIAN_FRONTEND=noninteractive chroot build/squashfs/rootfs apt-get install -y --no-install-recommends linux-image-generic initramfs-tools live-boot casper
         sudo DEBIAN_FRONTEND=noninteractive chroot build/squashfs/rootfs apt-get install -y kubuntu-desktop calamares sddm dbus-x11
         
-        # Altlasten entfernen
-        sudo chroot build/squashfs/rootfs id -u ubuntu &>/dev/null && sudo chroot build/squashfs/rootfs userdel -r ubuntu || true
-
-        # SDDM so einstellen, dass das Wallpaper auch auf dem Anmeldebildschirm / Hintergrund geladen wird
+        # SDDM Hintergrund für den Anmeldebildschirm festlegen
         sudo mkdir -p build/squashfs/rootfs/etc/sddm.conf.d
         sudo tee build/squashfs/rootfs/etc/sddm.conf.d/background.conf << 'EOF'
         [Theme]
         Current=breeze
         Background=/usr/share/backgrounds/duckling/default.jpg
+        EOF
+
+        # Calamares so einrichten, dass es beim Start direkt greift oder als Setup dient
+        sudo mkdir -p build/squashfs/rootfs/etc/xdg/autostart
+        sudo tee build/squashfs/rootfs/etc/xdg/autostart/calamares.desktop << 'EOF'
+        [Desktop Entry]
+        Type=Application
+        Name=Install ducklingOS
+        Exec=sudo calamares
+        Icon=calamares
+        Terminal=false
+        StartupNotify=true
         EOF
 
         sudo umount build/squashfs/rootfs/dev
@@ -80,7 +89,7 @@ jobs:
         set timeout=5
         set default=0
         menuentry "ducklingOS 1 Starten" {
-            linux /casper/vmlinuz boot=casper username=duckling hostname=duckling quiet splash ---
+            linux /casper/vmlinuz boot=casper quiet splash ---
             initrd /casper/initrd
         }
         EOF

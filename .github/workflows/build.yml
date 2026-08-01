@@ -31,7 +31,7 @@ jobs:
         sudo mkdir -p build/squashfs/rootfs/usr/share/backgrounds/duckling/
         sudo cp duckling_wallpaper.jpg build/squashfs/rootfs/usr/share/backgrounds/duckling/default.jpg
         
-        # Globales KDE-Hintergrundbild via /etc/skel
+        # Globales KDE-Hintergrundbild für alle neuen Benutzer
         sudo mkdir -p build/squashfs/rootfs/etc/skel/.config
         sudo tee build/squashfs/rootfs/etc/skel/.config/plasma-org.kde.plasma.desktop-appletsrc << 'EOF'
         [Containments][1][Wallpaper][org.kde.image][General]
@@ -39,6 +39,12 @@ jobs:
         EOF
 
         if [ -d "skel/.config" ]; then sudo cp -r skel/.config/* build/squashfs/rootfs/etc/skel/.config/; fi
+
+        # Calamares Konfiguration ins System kopieren, falls im Repo vorhanden
+        if [ -d "calamares" ]; then
+          sudo mkdir -p build/squashfs/rootfs/etc/calamares/
+          sudo cp -r calamares/* build/squashfs/rootfs/etc/calamares/
+        fi
 
     - name: Live-System konfigurieren & KDE Plasma installieren
       run: |

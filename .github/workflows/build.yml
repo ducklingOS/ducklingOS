@@ -30,7 +30,14 @@ jobs:
         sudo cp os-release build/squashfs/rootfs/os-release
         sudo mkdir -p build/squashfs/rootfs/usr/share/backgrounds/duckling/
         sudo cp duckling_wallpaper.jpg build/squashfs/rootfs/usr/share/backgrounds/duckling/default.jpg
-        sudo mkdir -p build/squashfs/rootfs/etc/skel/.config/
+        
+        # GLOBALES HINTERGRUND-VORLAGEN SYSTEM (für /etc/skel, damit jeder neue User es hat)
+        sudo mkdir -p build/squashfs/rootfs/etc/skel/.config
+        sudo tee build/squashfs/rootfs/etc/skel/.config/plasma-org.kde.plasma.desktop-appletsrc << 'EOF'
+        [Containments][1][Wallpaper][org.kde.image][General]
+        Image=file:///usr/share/backgrounds/duckling/default.jpg
+        EOF
+
         if [ -d "skel/.config" ]; then sudo cp -r skel/.config/* build/squashfs/rootfs/etc/skel/.config/; fi
 
     - name: Live-System konfigurieren & KDE Plasma installieren
@@ -44,28 +51,19 @@ jobs:
         sudo DEBIAN_FRONTEND=noninteractive chroot build/squashfs/rootfs apt-get install -y --no-install-recommends linux-image-generic initramfs-tools live-boot casper
         sudo DEBIAN_FRONTEND=noninteractive chroot build/squashfs/rootfs apt-get install -y kubuntu-desktop calamares sddm dbus-x11
         
-        # 1. Ubuntu-User entfernen & Duckling-User anlegen
+        # 1. Standard-Live-User (z. B. 'live' oder 'duckling' ohne festes Autologin auf ein hartes Konto, 
+        # damit man im Live-Modus frei ist oder Calamares den User anlegen lässt)
         sudo chroot build/squashfs/rootfs id -u ubuntu &>/dev/null && sudo chroot build/squashfs/rootfs userdel -r ubuntu || true
+        
+        # Wir erstellen einen neutralen Live-User für den Start, falls gewünscht, 
+        # oder lassen SDDM offen für die Eingabe.
         sudo chroot build/squashfs/rootfs useradd -m -s /bin/bash -G sudo duckling
         sudo chroot build/squashfs/rootfs passwd -d duckling
 
-        # 2. SDDM Autologin einrichten (damit nur 'duckling' bootet)
-        sudo mkdir -p build/squashfs/rootfs/etc/sddm.conf.d
-        sudo tee build/squashfs/rootfs/etc/sddm.conf.d/autologin.conf << 'EOF'
-        [Autologin]
-        User=duckling
-        Session=plasma
-        EOF
-
-        # 3. HINTERGRUND EINrichten für KDE Plasma (User-Config für duckling)
-        sudo mkdir -p build/squashfs/rootfs/home/duckling/.config
-        sudo tee build/squashfs/rootfs/home/duckling/.config/plasma-org.kde.plasma.desktop-appletsrc << 'EOF'
-        [Containments][1][Wallpaper][org.kde.image][General]
-        Image=file:///usr/share/backgrounds/duckling/default.jpg
-        EOF
-
-        # Rechte für das Homeverzeichnis auf den duckling-User setzen (UID 1000)
-        sudo chroot build/squashfs/rootfs chown -R 1000:1000 /home/duckling
+        # WICHTIG: KEIN erzwungenes AutomaticLogin mehr, 
+        # damit man im Anmeldebildschirm (SDDM) landet oder den Installer sieht!
+        # Falls SDDM direkt starten soll, aber ohne festen Autologin-User:
+        sudo rm -f build/squashfs/rootfs/etc/sddm.conf.d/autologin.conf
 
         sudo umount build/squashfs/rootfs/dev
         sudo umount build/squashfs/rootfs/proc

@@ -31,7 +31,7 @@ jobs:
         sudo mkdir -p build/squashfs/rootfs/usr/share/backgrounds/duckling/
         sudo cp duckling_wallpaper.jpg build/squashfs/rootfs/usr/share/backgrounds/duckling/default.jpg
         
-        # GLOBALES HINTERGRUND-VORLAGEN SYSTEM (für /etc/skel, damit jeder neue User es hat)
+        # Hintergrund für KDE Global (damit es sofort greift)
         sudo mkdir -p build/squashfs/rootfs/etc/skel/.config
         sudo tee build/squashfs/rootfs/etc/skel/.config/plasma-org.kde.plasma.desktop-appletsrc << 'EOF'
         [Containments][1][Wallpaper][org.kde.image][General]
@@ -51,19 +51,16 @@ jobs:
         sudo DEBIAN_FRONTEND=noninteractive chroot build/squashfs/rootfs apt-get install -y --no-install-recommends linux-image-generic initramfs-tools live-boot casper
         sudo DEBIAN_FRONTEND=noninteractive chroot build/squashfs/rootfs apt-get install -y kubuntu-desktop calamares sddm dbus-x11
         
-        # 1. Standard-Live-User (z. B. 'live' oder 'duckling' ohne festes Autologin auf ein hartes Konto, 
-        # damit man im Live-Modus frei ist oder Calamares den User anlegen lässt)
+        # Altlasten entfernen
         sudo chroot build/squashfs/rootfs id -u ubuntu &>/dev/null && sudo chroot build/squashfs/rootfs userdel -r ubuntu || true
-        
-        # Wir erstellen einen neutralen Live-User für den Start, falls gewünscht, 
-        # oder lassen SDDM offen für die Eingabe.
-        sudo chroot build/squashfs/rootfs useradd -m -s /bin/bash -G sudo duckling
-        sudo chroot build/squashfs/rootfs passwd -d duckling
 
-        # WICHTIG: KEIN erzwungenes AutomaticLogin mehr, 
-        # damit man im Anmeldebildschirm (SDDM) landet oder den Installer sieht!
-        # Falls SDDM direkt starten soll, aber ohne festen Autologin-User:
-        sudo rm -f build/squashfs/rootfs/etc/sddm.conf.d/autologin.conf
+        # SDDM so einstellen, dass das Wallpaper auch auf dem Anmeldebildschirm / Hintergrund geladen wird
+        sudo mkdir -p build/squashfs/rootfs/etc/sddm.conf.d
+        sudo tee build/squashfs/rootfs/etc/sddm.conf.d/background.conf << 'EOF'
+        [Theme]
+        Current=breeze
+        Background=/usr/share/backgrounds/duckling/default.jpg
+        EOF
 
         sudo umount build/squashfs/rootfs/dev
         sudo umount build/squashfs/rootfs/proc
@@ -83,7 +80,7 @@ jobs:
         set timeout=5
         set default=0
         menuentry "ducklingOS 1 Starten" {
-            linux /casper/vmlinuz boot=casper quiet splash ---
+            linux /casper/vmlinuz boot=casper username=duckling hostname=duckling quiet splash ---
             initrd /casper/initrd
         }
         EOF

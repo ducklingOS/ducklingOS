@@ -16,12 +16,14 @@ jobs:
         sudo apt-get install -y \
           squashfs-tools xorriso mtools wget rsync gcc make \
           grub-pc-bin grub-efi-amd64-bin grub-common
+
     - name: Minimales RootFS via Docker erstellen
       run: |
         mkdir -p build/squashfs/rootfs build/iso/casper
         sudo docker run --name duckling_base ubuntu:24.04 /bin/true
         sudo docker export duckling_base | sudo tar -C build/squashfs/rootfs -xf -
         sudo docker rm duckling_base
+
     - name: ducklingOS Branding einspielen
       run: |
         sudo cp lsb-release build/squashfs/rootfs/etc/lsb-release
@@ -30,6 +32,7 @@ jobs:
         sudo cp duckling_wallpaper.jpg build/squashfs/rootfs/usr/share/backgrounds/duckling/default.jpg
         sudo mkdir -p build/squashfs/rootfs/etc/skel/.config/
         if [ -d "skel/.config" ]; then sudo cp -r skel/.config/* build/squashfs/rootfs/etc/skel/.config/; fi
+
     - name: Live-System konfigurieren & KDE Plasma installieren
       run: |
         sudo mount --bind /dev build/squashfs/rootfs/dev
@@ -40,17 +43,31 @@ jobs:
         
         sudo DEBIAN_FRONTEND=noninteractive chroot build/squashfs/rootfs apt-get install -y --no-install-recommends linux-image-generic initramfs-tools live-boot casper
         sudo DEBIAN_FRONTEND=noninteractive chroot build/squashfs/rootfs apt-get install -y kubuntu-desktop calamares sddm dbus-x11
-        sudo chroot build/squashfs/rootfs useradd -m -s /bin/bash -g sudo duckling
+        
+        # --- HIER: Ubuntu-User löschen (falls vorhanden) & Duckling-User einrichten ---
+        sudo chroot build/squashfs/rootfs id -u ubuntu &>/dev/null && sudo chroot build/squashfs/rootfs userdel -r ubuntu || true
+        sudo chroot build/squashfs/rootfs useradd -m -s /bin/bash -G sudo duckling
         sudo chroot build/squashfs/rootfs passwd -d duckling
+
+        # --- HIER: SDDM Autologin für duckling konfigurieren (da ihr KDE nutzt) ---
+        sudo mkdir -p build/squashfs/rootfs/etc/sddm.conf.d
+        sudo tee build/squashfs/rootfs/etc/sddm.conf.d/autologin.conf << 'EOF'
+        [Autologin]
+        User=duckling
+        Session=plasma
+        EOF
+
         sudo umount build/squashfs/rootfs/dev
         sudo umount build/squashfs/rootfs/proc
         sudo umount build/squashfs/rootfs/sys
+
     - name: Kernel & Initrd extrahieren, SquashFS bauen
       run: |
         sudo mksquashfs build/squashfs/rootfs build/iso/casper/filesystem.squashfs -comp xz
         sudo cp $(ls -v build/squashfs/rootfs/boot/vmlinuz-* | tail -n 1) build/iso/casper/vmlinuz
         sudo cp $(ls -v build/squashfs/rootfs/boot/initrd.img-* | tail -n 1) build/iso/casper/initrd
         sudo chmod -R 755 build/
+
     - name: GRUB-Konfiguration schreiben
       run: |
         mkdir -p build/iso/boot/grub
@@ -62,10 +79,12 @@ jobs:
             initrd /casper/initrd
         }
         EOF
+
     - name: ISO erstellen mit grub-mkrescue (BIOS + UEFI)
       run: |
         sudo grub-mkrescue -o ducklingOS_1_x64.iso build/iso \
           -- -volid "ducklingOS_1"
+
     - name: ISO als Download bereitstellen
       uses: actions/upload-artifact@v4
       with:

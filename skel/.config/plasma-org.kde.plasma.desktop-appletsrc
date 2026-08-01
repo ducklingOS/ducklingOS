@@ -10,5 +10,5 @@ wallpaperplugin=org.kde.image
 ToolBoxInCorner=false
 
 [Containments][Wallpaper][org.kde.image][General]
-Image=file:///usr/share/backgrounds/duckling/default.jpg
+Image=file:///usr/share/backgrounds/duckling_wallpaper.jpg
 FillMode=2

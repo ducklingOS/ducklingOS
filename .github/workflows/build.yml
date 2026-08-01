@@ -31,7 +31,7 @@ jobs:
         sudo mkdir -p build/squashfs/rootfs/usr/share/backgrounds/duckling/
         sudo cp duckling_wallpaper.jpg build/squashfs/rootfs/usr/share/backgrounds/duckling/default.jpg
         
-        # Globales KDE-Hintergrundbild via /etc/skel erzwingen
+        # Globales KDE-Hintergrundbild via /etc/skel
         sudo mkdir -p build/squashfs/rootfs/etc/skel/.config
         sudo tee build/squashfs/rootfs/etc/skel/.config/plasma-org.kde.plasma.desktop-appletsrc << 'EOF'
         [Containments][1][Wallpaper][org.kde.image][General]
@@ -51,26 +51,12 @@ jobs:
         sudo DEBIAN_FRONTEND=noninteractive chroot build/squashfs/rootfs apt-get install -y --no-install-recommends linux-image-generic initramfs-tools live-boot casper
         sudo DEBIAN_FRONTEND=noninteractive chroot build/squashfs/rootfs apt-get install -y kubuntu-desktop calamares sddm dbus-x11
         
-        # 1. Ubuntu-Standard-User komplett löschen
-        sudo chroot build/squashfs/rootfs id -u ubuntu &>/dev/null && sudo chroot build/squashfs/rootfs userdel -r ubuntu || true
-        
-        # 2. Echten duckling-User als Standard für das Live-System anlegen (ohne Passwort)
-        sudo chroot build/squashfs/rootfs useradd -m -s /bin/bash -G sudo duckling
-        sudo chroot build/squashfs/rootfs passwd -d duckling
-
-        # 3. SDDM Hintergrund für den Anmeldebildschirm festlegen
+        # SDDM Hintergrund für den Anmeldebildschirm festlegen
         sudo mkdir -p build/squashfs/rootfs/etc/sddm.conf.d
         sudo tee build/squashfs/rootfs/etc/sddm.conf.d/background.conf << 'EOF'
         [Theme]
         Current=breeze
         Background=/usr/share/backgrounds/duckling/default.jpg
-        EOF
-
-        # 4. Automatischer Login für den duckling-User im Live-System
-        sudo tee build/squashfs/rootfs/etc/sddm.conf.d/autologin.conf << 'EOF'
-        [Autologin]
-        User=duckling
-        Session=plasma
         EOF
 
         sudo umount build/squashfs/rootfs/dev
@@ -90,8 +76,8 @@ jobs:
         cat > build/iso/boot/grub/grub.cfg << 'EOF'
         set timeout=5
         set default=0
-        menuentry "ducklingOS 1 Starten" {
-            linux /casper/vmlinuz boot=casper username=duckling hostname=duckling quiet splash ---
+        menuentry "ducklingOS 1 Starten (Installieren)" {
+            linux /casper/vmlinuz boot=casper quiet splash ---
             initrd /casper/initrd
         }
         EOF

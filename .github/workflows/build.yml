@@ -56,7 +56,7 @@ jobs:
         
         # System-Pakete, KDE Plasma, SDDM und Calamares installieren
         sudo DEBIAN_FRONTEND=noninteractive chroot build/squashfs/rootfs apt-get install -y --no-install-recommends linux-image-generic initramfs-tools live-boot casper
-        sudo DEBIAN_FRONTEND=noninteractive chroot build/squashfs/rootfs apt-get install -y kubuntu-desktop calamares calamares-settings-ubuntu sddm dbus-x11 polkitd
+        sudo DEBIAN_FRONTEND=noninteractive chroot build/squashfs/rootfs apt-get install -y kubuntu-desktop calamares sddm dbus-x11 polkitd
         
         # 1. Den unerwünschten Ubuntu-User komplett löschen, falls vorhanden
         sudo chroot build/squashfs/rootfs userdel -r ubuntu 2>/dev/null || true

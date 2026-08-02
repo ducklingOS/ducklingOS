@@ -46,7 +46,7 @@ jobs:
           sudo cp -r calamares/* build/squashfs/rootfs/etc/calamares/
         fi
 
-    - name: Live-System konfigurieren & Calamares Autostart einrichten
+    - name: Live-System konfigurieren & User fixen
       run: |
         sudo mount --bind /dev build/squashfs/rootfs/dev
         sudo mount --bind /proc build/squashfs/rootfs/proc
@@ -58,25 +58,26 @@ jobs:
         sudo DEBIAN_FRONTEND=noninteractive chroot build/squashfs/rootfs apt-get install -y --no-install-recommends linux-image-generic initramfs-tools live-boot casper
         sudo DEBIAN_FRONTEND=noninteractive chroot build/squashfs/rootfs apt-get install -y kubuntu-desktop calamares sddm dbus-x11 polkitd
         
-        # SDDM Login-Hintergrund auf duckling_wallpaper.jpg setzen
+        # 1. Den unerwünschten Ubuntu-User komplett löschen, falls vorhanden
+        sudo chroot build/squashfs/rootfs userdel -r ubuntu 2>/dev/null || true
+
+        # 2. Echten duckling Live-User anlegen (ohne Passwort für direkten Einstieg)
+        sudo chroot build/squashfs/rootfs useradd -m -s /bin/bash -G sudo duckling
+        sudo chroot build/squashfs/rootfs passwd -d duckling
+
+        # 3. SDDM Autologin für den duckling-User erzwingen (umgeht den Login-Screen)
         sudo mkdir -p build/squashfs/rootfs/etc/sddm.conf.d
-        sudo tee build/squashfs/rootfs/etc/sddm.conf.d/background.conf << 'EOF'
+        sudo tee build/squashfs/rootfs/etc/sddm.conf.d/autologin.conf << 'EOF'
+        [Autologin]
+        User=duckling
+        Session=plasma
+
         [Theme]
         Current=breeze
         Background=/usr/share/backgrounds/duckling/default.jpg
         EOF
 
-        # Polkit-Regel damit Calamares ohne Passwort-Abfrage im Live-Modus startet
-        sudo mkdir -p build/squashfs/rootfs/etc/polkit-1/rules.d
-        sudo tee build/squashfs/rootfs/etc/polkit-1/rules.d/49-calamares-live.rules << 'EOF'
-        polkit.addRule(function(action, subject) {
-            if (action.id == "org.freedesktop.policykit.exec" && subject.isInGroup("sudo")) {
-                return polkit.Result.YES;
-            }
-        });
-        EOF
-
-        # Calamares als direkten Autostart beim Hochfahren der grafischen Oberflaeche einrichten
+        # 4. Calamares Autostart einrichten
         sudo mkdir -p build/squashfs/rootfs/etc/xdg/autostart
         sudo tee build/squashfs/rootfs/etc/xdg/autostart/calamares.desktop << 'EOF'
         [Desktop Entry]
@@ -99,7 +100,7 @@ jobs:
         sudo cp $(ls -v build/squashfs/rootfs/boot/initrd.img-* | tail -n 1) build/iso/casper/initrd
         sudo chmod -R 755 build/
 
-    - name: GRUB-Konfiguration schreiben (User auf duckling umbenennen)
+    - name: GRUB-Konfiguration schreiben
       run: |
         mkdir -p build/iso/boot/grub
         cat > build/iso/boot/grub/grub.cfg << 'EOF'
